@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Smart Attendance System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05080f;
+    --surface: #0d1220;
+    --surface2: #131929;
+    --border: rgba(99,179,237,0.1);
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #8b5cf6;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --scan: #3b82f6;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Animated grid background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Glow blobs ── */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(100px);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+  .blob-1 { width: 500px; height: 500px; background: var(--accent); top: -150px; left: -150px; }
+  .blob-2 { width: 400px; height: 400px; background: var(--accent3); bottom: -100px; right: -100px; animation-delay: -4s; }
+  .blob-3 { width: 300px; height: 300px; background: var(--accent2); top: 40%; left: 50%; animation-delay: -8s; }
+
+  @keyframes drift {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.05); }
+  }
+
+  /* ── Layout ── */
+  .app { position: relative; z-index: 1; display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: rgba(13,18,32,0.9);
+    border-right: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    padding: 28px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .logo {
+    padding: 0 24px 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .nav-section { padding: 0 12px; margin-bottom: 8px; }
+  .nav-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 12px;
+    margin-bottom: 6px;
+    margin-top: 20px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .nav-item:hover { background: rgba(59,130,246,0.08); color: var(--text); }
+
+  .nav-item.active {
+    background: rgba(59,130,246,0.15);
+    color: var(--accent);
+  }
+
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 20%; bottom: 20%;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 99px;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 20px 24px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    flex-shrink: 0;
+  }
+
+  .user-info .name { font-size: 13px; font-weight: 600; }
+  .user-info .role { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  /* ── Main ── */
+  .main { padding: 36px 40px; overflow-y: auto; }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+  }
+
+  .page-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -0.5px; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    font-family: 'Instrument Sans', sans-serif;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #2563eb);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(59,130,246,0.45); }
+
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: rgba(99,179,237,0.3); }
+
+  /* ── Stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px; }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .stat-card:hover { border-color: rgba(99,179,237,0.25); transform: translateY(-2px); }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.2;
+  }
+
+  .stat-card.blue::after  { background: var(--accent); }
+  .stat-card.green::after { background: var(--green); }
+  .stat-card.amber::after { background: var(--amber); }
+  .stat-card.purple::after { background: var(--accent3); }
+
+  .stat-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+    margin-bottom: 14px;
+  }
+
+  .stat-icon.blue   { background: rgba(59,130,246,0.15); }
+  .stat-icon.green  { background: rgba(16,185,129,0.15); }
+  .stat-icon.amber  { background: rgba(245,158,11,0.15); }
+  .stat-icon.purple { background: rgba(139,92,246,0.15); }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; letter-spacing: 0.5px; }
+
+  .stat-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .stat-change.up   { color: var(--green); }
+  .stat-change.down { color: var(--red); }
+
+  /* ── Two-col layout ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 380px; gap: 20px; margin-bottom: 24px; }
+
+  /* ── Face scanner ── */
+  .scanner-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-live {
+    background: rgba(16,185,129,0.15);
+    color: var(--green);
+    border: 1px solid rgba(16,185,129,0.3);
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* ── Camera viewport ── */
+  .camera-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #080c14;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  /* Fake camera feed */
+  .camera-feed {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, #0f1825 0%, #050810 100%);
+  }
+
+  /* Scan line animation */
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), var(--accent), transparent);
+    box-shadow: 0 0 20px var(--accent);
+    animation: scanV 3s ease-in-out infinite;
+  }
+
+  @keyframes scanV {
+    0%   { top: 5%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 95%; opacity: 0; }
+  }
+
+  /* Face detection box */
+  .face-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 160px;
+    height: 200px;
+    animation: faceShift 4s ease-in-out infinite alternate;
+  }
+
+  @keyframes faceShift {
+    from { transform: translate(-55%, -52%); }
+    to   { transform: translate(-45%, -48%); }
+  }
+
+  .face-box-border {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    animation: borderFlash 2s ease-in-out infinite;
+  }
+
+  @keyframes borderFlash {
+    0%, 100% { border-color: var(--accent); box-shadow: 0 0 15px rgba(59,130,246,0.5); }
+    50%       { border-color: var(--accent2); box-shadow: 0 0 25px rgba(6,182,212,0.7); }
+  }
+
+  /* Corner markers */
+  .corner { position: absolute; width: 20px; height: 20px; }
+  .corner::before, .corner::after { content: ''; position: absolute; background: var(--accent2); }
+
+  .corner-tl { top: -2px; left: -2px; }
+  .corner-tl::before { width: 14px; height: 2px; top: 0; left: 0; }
+  .corner-tl::after  { width: 2px; height: 14px; top: 0; left: 0; }
+
+  .corner-tr { top: -2px; right: -2px; }
+  .corner-tr::before { width: 14px; height: 2px; top: 0; right: 0; }
+  .corner-tr::after  { width: 2px; height: 14px; top: 0; right: 0; }
+
+  .corner-bl { bottom: -2px; left: -2px; }
+  .corner-bl::before { width: 14px; height: 2px; bottom: 0; left: 0; }
+  .corner-bl::after  { width: 2px; height: 14px; bottom: 0; left: 0; }
+
+  .corner-br { bottom: -2px; right: -2px; }
+  .corner-br::before { width: 14px; height: 2px; bottom: 0; right: 0; }
+  .corner-br::after  { width: 2px; height: 14px; bottom: 0; right: 0; }
+
+  /* Mesh dots */
+  .face-mesh {
+    position: absolute;
+    inset: 10px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    gap: 2px;
+    opacity: 0.4;
+  }
+
+  .mesh-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: meshAnim 2s ease-in-out infinite;
+  }
+
+  @keyframes meshAnim {
+    0%, 100% { opacity: 0.3; }
+    50%       { opacity: 1; }
+  }
+
+  /* Recognized label */
+  .face-label {
+    position: absolute;
+    bottom: -36px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(16,185,129,0.2);
+    border: 1px solid rgba(16,185,129,0.5);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    white-space: nowrap;
+    animation: labelPop 0.5s ease-out forwards;
+  }
+
+  @keyframes labelPop {
+    from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* Floating particles */
+  .particle {
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: floatParticle linear infinite;
+    opacity: 0;
+  }
+
+  @keyframes floatParticle {
+    0%   { opacity: 0; transform: translateY(0) scale(0); }
+    20%  { opacity: 0.8; transform: translateY(-20px) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(0); }
+  }
+
+  /* HUD overlays */
+  .hud-corner {
+    position: absolute;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: rgba(59,130,246,0.7);
+    letter-spacing: 1px;
+  }
+
+  .hud-tl { top: 12px; left: 14px; }
+  .hud-tr { top: 12px; right: 14px; text-align: right; }
+  .hud-bl { bottom: 12px; left: 14px; }
+  .hud-br { bottom: 12px; right: 14px; text-align: right; }
+
+  /* Progress bar under camera */
+  .scan-progress-bar {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 99px;
+    margin-top: 14px;
+    overflow: hidden;
+  }
+
+  .scan-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    animation: progFill 3s ease-in-out infinite;
+  }
+
+  @keyframes progFill {
+    0%   { width: 0%; }
+    70%  { width: 100%; }
+    100% { width: 100%; }
+  }
+
+  .scan-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .scan-status .recognized { color: var(--green); }
+
+  /* ── Recent detections panel ── */
+  .detections-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detection-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+  .detection-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    animation: slideIn 0.4s ease-out;
+  }
+
+  .detection-item:hover { border-color: var(--border); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .detection-item.new {
+    border-color: rgba(16,185,129,0.3);
+    background: rgba(16,185,129,0.05);
+  }
+
+  .det-avatar {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .det-info { flex: 1; min-width: 0; }
+  .det-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .det-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+  .det-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 9px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .status-in  { background: rgba(16,185,129,0.15); color: var(--green); }
+  .status-out { background: rgba(239,68,68,0.12); color: var(--red); }
+  .status-late { background: rgba(245,158,11,0.12); color: var(--amber); }
+
+  /* ── Attendance table ── */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .table-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .search-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 14px;
+    transition: border-color 0.2s;
+  }
+
+  .search-box:focus-within { border-color: rgba(59,130,246,0.4); }
+
+  .search-box input {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    flex: 1;
+  }
+
+  .search-box input::placeholder { color: var(--muted); }
+
+  .search-icon { color: var(--muted); font-size: 14px; }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover { border-color: rgba(99,179,237,0.3); }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(99,179,237,0.05);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: rgba(59,130,246,0.04); }
+  tbody tr:last-child { border-bottom: none; }
+
+  tbody td {
+    padding: 14px 12px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  .student-cell { display: flex; align-items: center; gap: 10px; }
+
+  .mini-avatar {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    flex-shrink: 0;
+  }
+
+  .confidence-bar {
+    width: 80px;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 99px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .pill-present { background: rgba(16,185,129,0.12); color: var(--green); }
+  .pill-absent  { background: rgba(239,68,68,0.1); color: var(--red); }
+  .pill-late    { background: rgba(245,158,11,0.1); color: var(--amber); }
+
+  /* ── Analytics bottom row ── */
+  .analytics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .analytics-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+  }
+
+  /* Mini bar chart */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 80px;
+    margin-top: 20px;
+  }
+
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+  .bar {
+    width: 100%;
+    border-radius: 5px 5px 0 0;
+    background: linear-gradient(180deg, var(--accent), #1e40af);
+    transition: height 0.3s;
+    animation: barGrow 1s ease-out forwards;
+    transform-origin: bottom;
+  }
+
+  @keyframes barGrow {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+
+  .bar.high { background: linear-gradient(180deg, var(--green), #065f46); }
+  .bar.med  { background: linear-gradient(180deg, var(--accent), #1e40af); }
+  .bar.low  { background: linear-gradient(180deg, var(--amber), #92400e); }
+
+  .bar-label { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); }
+
+  /* Donut chart */
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: 16px;
+  }
+
+  .donut-svg { flex-shrink: 0; }
+
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .legend-val { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+    .analytics-row { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 20px; }
+  }
+
+  /* ── Notification toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .toast {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: toastIn 0.4s ease-out;
+    min-width: 280px;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .toast-icon { font-size: 20px; }
+  .toast-text .t1 { font-size: 13px; font-weight: 600; }
+  .toast-text .t2 { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+  .toast.green { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.07); }
+
+  /* Clock */
+  #clock {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="app">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <div class="logo-icon">🎓</div>
+        <div>
+          <div class="logo-text">Face<span>Attend</span></div>
+          <div class="logo-sub">Smart Attendance v2.0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <div class="nav-item active" onclick="setActive(this)">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">📷</span> Live Scanner
+        <span class="nav-badge">●</span>
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">📋</span> Attendance Log
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">👥</span> Students
+      </div>
+
+      <div class="nav-label">Academics</div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">📚</span> Courses
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">🏫</span> Classes
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">📈</span> Reports
+      </div>
+
+      <div class="nav-label">System</div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">🧠</span> Face Training
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">⚙️</span> Settings
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="avatar">SA</div>
+        <div class="user-info">
+          <div class="name">Dr. S. Agarwal</div>
+          <div class="role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">CS-301 · Advanced Algorithms · Today, <span id="dateStr"></span></div>
+      </div>
+      <div class="topbar-right">
+        <div id="clock">--:--:--</div>
+        <button class="btn btn-ghost">⬇ Export</button>
+        <button class="btn btn-primary" onclick="simulateScan()">📷 Start Scan</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card blue">
+        <div class="stat-icon blue">👥</div>
+        <div class="stat-value" id="totalStudents">62</div>
+        <div class="stat-label">Total Students</div>
+        <div class="stat-change up">↑ 3 from last class</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon green">✅</div>
+        <div class="stat-value" id="presentCount">48</div>
+        <div class="stat-label">Present Today</div>
+        <div class="stat-change up">↑ 77.4% attendance</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-icon amber">⏰</div>
+        <div class="stat-value">5</div>
+        <div class="stat-label">Late Arrivals</div>
+        <div class="stat-change down">↓ 8.1% of class</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon purple">🧠</div>
+        <div class="stat-value">98.6%</div>
+        <div class="stat-label">Model Accuracy</div>
+        <div class="stat-change up">↑ 0.3% improvement</div>
+      </div>
+    </div>
+
+    <!-- Scanner + Detections -->
+    <div class="grid-2">
+      <!-- Camera -->
+      <div class="scanner-card">
+        <div class="card-header">
+          <div class="card-title">Live Face Recognition</div>
+          <div class="card-badge badge-live">
+            <div class="live-dot"></div>
+            LIVE
+          </div>
+        </div>
+
+        <div class="camera-viewport">
+          <div class="camera-feed"></div>
+          <div class="scan-line"></div>
+
+          <!-- Particles -->
+          <div class="particle" style="left:30%;animation-duration:3s;animation-delay:0s;"></div>
+          <div class="particle" style="left:50%;animation-duration:2.5s;animation-delay:1s;"></div>
+          <div class="particle" style="left:70%;animation-duration:4s;animation-delay:0.5s;"></div>
+          <div class="particle" style="left:40%;animation-duration:3.5s;animation-delay:2s;"></div>
+
+          <!-- Face box -->
+          <div class="face-box" id="faceBox">
+            <div class="face-box-border"></div>
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+            <div class="face-mesh" id="faceMesh"></div>
+            <div class="face-label" id="faceLabel">● Arjun Sharma · 99.2%</div>
+          </div>
+
+          <!-- HUD overlays -->
+          <div class="hud-corner hud-tl">RES: 1920×1080<br>FPS: 30 / CAM-01</div>
+          <div class="hud-corner hud-tr" id="hudTime">00:00:00<br>MODEL: YOLOv8-FACE</div>
+          <div class="hud-corner hud-bl">CONF: 0.96 / DIST: 1.2m</div>
+          <div class="hud-corner hud-br">DETECT: 1 FACE<br>PROC: 12ms</div>
+        </div>
+
+        <div class="scan-progress-bar"><div class="scan-progress-fill"></div></div>
+        <div class="scan-status">
+          <span>🔵 Scanning classroom…</span>
+          <span class="recognized" id="recCount">● 48 recognized</span>
+        </div>
+      </div>
+
+      <!-- Recent detections -->
+      <div class="detections-card">
+        <div class="card-header">
+          <div class="card-title">Recent Detections</div>
+          <div class="card-badge" style="background:rgba(59,130,246,0.1);color:var(--accent);border:1px solid rgba(59,130,246,0.25);">
+            AUTO-LOG
+          </div>
+        </div>
+        <div class="detection-list" id="detectionList">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance table -->
+    <div class="table-card">
+      <div class="card-header">
+        <div class="card-title">Attendance Register</div>
+        <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px;">View All →</button>
+      </div>
+      <div class="table-toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Search student name, ID…">
+        </div>
+        <button class="filter-btn">📅 Today</button>
+        <button class="filter-btn">🎓 CS-301</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>ID</th>
+            <th>Time In</th>
+            <th>Confidence</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="attTable">
+          <!-- filled by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Analytics -->
+    <div class="analytics-row">
+      <div class="analytics-card">
+        <div class="card-title">Weekly Attendance Trend</div>
+        <div class="bar-chart" id="barChart">
+          <!-- filled by JS -->
+        </div>
+      </div>
+      <div class="analytics-card">
+        <div class="card-title">Attendance Breakdown</div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" width="100" height="100" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#131929" stroke-width="4"/>
+            <!-- Present 77% -->
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" stroke-width="4"
+              stroke-dasharray="87.96 100" stroke-dashoffset="25" stroke-linecap="round"
+              transform="rotate(-90 18 18)"/>
+            <!-- Late 8% -->
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" stroke-width="4"
+              stroke-dasharray="9.12 100" stroke-dashoffset="-62.96" stroke-linecap="round"
+              transform="rotate(-90 18 18)"/>
+            <!-- Absent 15% -->
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#ef4444" stroke-width="4"
+              stroke-dasharray="17.12 100" stroke-dashoffset="-72.08" stroke-linecap="round"
+              transform="rotate(-90 18 18)"/>
+            <text x="18" y="18" text-anchor="middle" dominant-baseline="middle"
+              fill="#e2e8f0" font-family="Syne,sans-serif" font-size="5.5" font-weight="800">77%</text>
+          </svg>
+          <div class="donut-legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--green)"></div>
+              Present
+              <span class="legend-val">48</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--amber)"></div>
+              Late
+              <span class="legend-val">5</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--red)"></div>
+              Absent
+              <span class="legend-val">9</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ── Clock ──
+function tick() {
+  const now = new Date();
+  const ts = now.toLocaleTimeString('en-US', { hour12: false });
+  document.getElementById('clock').textContent = ts;
+  document.getElementById('hudTime').innerHTML = ts + '<br>MODEL: YOLOv8-FACE';
+}
+tick(); setInterval(tick, 1000);
+
+// ── Date ──
+const dateStr = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'short', year:'numeric' });
+document.getElementById('dateStr').textContent = dateStr;
+
+// ── Face mesh dots ──
+const mesh = document.getElementById('faceMesh');
+for (let i = 0; i < 80; i++) {
+  const d = document.createElement('div');
+  d.className = 'mesh-dot';
+  d.style.animationDelay = (Math.random() * 2) + 's';
+  d.style.opacity = Math.random() * 0.6 + 0.2;
+  mesh.appendChild(d);
+}
+
+// ── Nav active ──
+function setActive(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Student data ──
+const students = [
+  { name: 'Arjun Sharma',    id: 'CS21001', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)',  status: 'present', time: '09:02', conf: 99 },
+  { name: 'Priya Nair',      id: 'CS21002', color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)',  status: 'present', time: '09:05', conf: 97 },
+  { name: 'Rahul Verma',     id: 'CS21003', color: '#10b981', bg: 'rgba(16,185,129,0.15)',  status: 'late',    time: '09:18', conf: 98 },
+  { name: 'Sneha Iyer',      id: 'CS21004', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  status: 'present', time: '09:01', conf: 96 },
+  { name: 'Dev Patel',       id: 'CS21005', color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   status: 'present', time: '09:03', conf: 99 },
+  { name: 'Ananya Krishnan', id: 'CS21006', color: '#ec4899', bg: 'rgba(236,72,153,0.15)',  status: 'absent',  time: '–',     conf: 0  },
+  { name: 'Karan Mehta',     id: 'CS21007', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)',  status: 'present', time: '09:04', conf: 95 },
+  { name: 'Ishaan Roy',      id: 'CS21008', color: '#10b981', bg: 'rgba(16,185,129,0.15)',  status: 'late',    time: '09:22', conf: 97 },
+];
+
+// ── Render table ──
+function renderTable() {
+  const tbody = document.getElementById('attTable');
+  tbody.innerHTML = students.map(s => {
+    const initials = s.name.split(' ').map(w => w[0]).join('').slice(0,2);
+    const pillClass = s.status === 'present' ? 'pill-present' : s.status === 'absent' ? 'pill-absent' : 'pill-late';
+    const confBar = s.conf > 0
+      ? `<span class="confidence-bar"><span class="confidence-fill" style="width:${s.conf}%"></span></span>${s.conf}%`
+      : '<span style="color:var(--muted);font-size:11px;font-family:\'DM Mono\',monospace">N/A</span>';
+    return `
+    <tr>
+      <td>
+        <div class="student-cell">
+          <div class="mini-avatar" style="background:${s.bg};color:${s.color}">${initials}</div>
+          <span style="font-weight:500">${s.name}</span>
+        </div>
+      </td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${s.id}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${s.time}</td>
+      <td>${confBar}</td>
+      <td><span class="pill ${pillClass}">${s.status.charAt(0).toUpperCase()+s.status.slice(1)}</span></td>
+      <td><button class="btn btn-ghost" style="font-size:11px;padding:5px 10px">Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+renderTable();
+
+// ── Render detections ──
+const detections = [
+  { name: 'Arjun Sharma',    time: '09:02:11', status: 'in',   color: '#3b82f6', bg: 'rgba(59,130,246,0.2)' },
+  { name: 'Dev Patel',       time: '09:03:44', status: 'in',   color: '#06b6d4', bg: 'rgba(6,182,212,0.2)'  },
+  { name: 'Sneha Iyer',      time: '09:01:55', status: 'in',   color: '#f59e0b', bg: 'rgba(245,158,11,0.2)' },
+  { name: 'Rahul Verma',     time: '09:18:22', status: 'late', color: '#10b981', bg: 'rgba(16,185,129,0.2)' },
+  { name: 'Priya Nair',      time: '09:05:07', status: 'in',   color: '#8b5cf6', bg: 'rgba(139,92,246,0.2)' },
+];
+
+function renderDetections(list) {
+  const dl = document.getElementById('detectionList');
+  dl.innerHTML = list.map((d,i) => {
+    const initials = d.name.split(' ').map(w => w[0]).join('').slice(0,2);
+    const sc = d.status === 'in' ? 'status-in' : d.status === 'out' ? 'status-out' : 'status-late';
+    const label = d.status === 'in' ? '✓ IN' : d.status === 'out' ? '✗ OUT' : '⏰ LATE';
+    return `<div class="detection-item ${i===0?'new':''}" style="animation-delay:${i*0.05}s">
+      <div class="det-avatar" style="background:${d.bg};color:${d.color}">${initials}</div>
+      <div class="det-info">
+        <div class="det-name">${d.name}</div>
+        <div class="det-meta">@ ${d.time}</div>
+      </div>
+      <div class="det-status ${sc}">${label}</div>
+    </div>`;
+  }).join('');
+}
+renderDetections(detections);
+
+// ── Bar chart ──
+const days = [
+  { label: 'Mon', pct: 82, cls: 'high' },
+  { label: 'Tue', pct: 75, cls: 'med' },
+  { label: 'Wed', pct: 90, cls: 'high' },
+  { label: 'Thu', pct: 68, cls: 'low' },
+  { label: 'Fri', pct: 77, cls: 'med' },
+  { label: 'Sat', pct: 55, cls: 'low' },
+  { label: 'Sun', pct: 0,  cls: 'low' },
+];
+
+const bc = document.getElementById('barChart');
+bc.innerHTML = days.map(d => `
+  <div class="bar-col">
+    <div class="bar ${d.cls}" style="height:${d.pct * 0.72}px"></div>
+    <div class="bar-label">${d.label}</div>
+  </div>`).join('');
+
+// ── Toast notification ──
+function showToast(name, time) {
+  const tc = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast green';
+  t.innerHTML = `
+    <span class="toast-icon">✅</span>
+    <div class="toast-text">
+      <div class="t1">${name} marked present</div>
+      <div class="t2">Confidence: 98.4% · ${time}</div>
+    </div>`;
+  tc.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ── Scan simulation ──
+const newStudents = [
+  { name: 'Maya Gupta',    id: 'CS21009', color: '#ec4899', bg: 'rgba(236,72,153,0.15)',  status: 'present', conf: 98, sColor: '#ec4899', sBg: 'rgba(236,72,153,0.2)' },
+  { name: 'Rohan Kapoor',  id: 'CS21010', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  status: 'present', conf: 96, sColor: '#f59e0b', sBg: 'rgba(245,158,11,0.2)' },
+  { name: 'Divya Menon',   id: 'CS21011', color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   status: 'late',    conf: 97, sColor: '#06b6d4', sBg: 'rgba(6,182,212,0.2)'  },
+];
+let scanIdx = 0;
+
+function simulateScan() {
+  if (scanIdx >= newStudents.length) { scanIdx = 0; }
+  const s = newStudents[scanIdx++];
+  const now = new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false });
+
+  // Update face label
+  document.getElementById('faceLabel').textContent = `● ${s.name} · ${s.conf}%`;
+
+  // Add to detections
+  detections.unshift({ name: s.name, time: now, status: s.status === 'late' ? 'late' : 'in', color: s.sColor, bg: s.sBg });
+  if (detections.length > 6) detections.pop();
+  renderDetections(detections);
+
+  // Add to table
+  const existing = students.find(st => st.id === s.id);
+  if (!existing) {
+    students.unshift({ name: s.name, id: s.id, color: s.color, bg: s.bg, status: s.status, time: now.slice(0,5), conf: s.conf });
+    renderTable();
+  }
+
+  // Update count
+  const present = students.filter(st => st.status === 'present' || st.status === 'late').length;
+  document.getElementById('presentCount').textContent = present;
+  document.getElementById('recCount').textContent = `● ${present} recognized`;
+
+  showToast(s.name, now);
+}
+
+// Auto-simulate every 8s
+setInterval(simulateScan, 8000);
+</script>
+</body>
+</html>

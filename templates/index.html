@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Attendance Dashboard</title>
+
+<style>
+body { font-family: system-ui; background:#f4f6f9; margin:0; }
+.container { max-width:1200px; margin:auto; padding:20px; }
+
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+h1 { font-size:22px; }
+
+.badge { padding:5px 10px; border-radius:20px; font-size:12px; background:#eaf3de; color:#3b6d11; }
+
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+
+.card { background:white; padding:15px; border-radius:10px; }
+
+.metric { font-size:22px; font-weight:bold; }
+.label { font-size:12px; color:gray; }
+
+.actions { margin-bottom:20px; }
+
+button {
+  padding:8px 14px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  margin-right:8px;
+}
+
+.primary { background:#185FA5; color:white; }
+.success { background:#3B6D11; color:white; }
+.danger { background:#A32D2D; color:white; }
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  background:white;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+th { text-align:left; font-size:12px; padding:10px; background:#f1f1f1; }
+td { padding:10px; border-bottom:1px solid #eee; }
+
+.status { padding:3px 10px; border-radius:20px; font-size:12px; }
+.present { background:#eaf3de; color:#3b6d11; }
+.absent { background:#fcebeb; color:#a32d2d; }
+
+.loader {
+  border:3px solid #eee;
+  border-top:3px solid #185FA5;
+  border-radius:50%;
+  width:14px; height:14px;
+  animation:spin 0.6s linear infinite;
+  display:inline-block;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.toast {
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  background:#1a1a18;
+  color:white;
+  padding:10px 15px;
+  border-radius:8px;
+  opacity:0;
+  transition:opacity 0.3s;
+}
+.toast.show { opacity:1; }
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+  <h1>Smart Attendance Dashboard</h1>
+  <div class="badge">● Live</div>
+</div>
+
+<div class="grid">
+  <div class="card"><div class="label">Total Students</div><div class="metric" id="total">-</div></div>
+  <div class="card"><div class="label">Present</div><div class="metric" id="present" style="color:#3b6d11;">-</div></div>
+  <div class="card"><div class="label">Absent</div><div class="metric" id="absent" style="color:#a32d2d;">-</div></div>
+  <div class="card"><div class="label">Attendance Rate</div><div class="metric" id="rate">-</div></div>
+</div>
+
+<div class="actions">
+  <button class="primary" onclick="startRecognition(event)">Start Recognition</button>
+  <button class="success" onclick="runEncode(event)">Encode Faces</button>
+  <button class="danger" onclick="stopRecognition(event)">Stop Recognition</button>
+
+  <!-- 🔥 NEW BUTTON -->
+  <button class="primary" onclick="captureNewStudent()">Capture New Student</button>
+
+  <button onclick="refreshData()">Refresh</button>
+  <button class="danger" onclick="resetData()">Reset</button>
+</div>
+
+<!-- 🔥 CAMERA FEED -->
+<!-- ✅ ADD CAMERA STREAM HERE -->
+<div class="card" style="margin-bottom:15px;">
+  <h3>Live Camera Feed</h3>
+  <img 
+  id="videoFeed"
+  src=""
+  width="75%"
+  style="
+    border-radius:10px;
+    border:2px solid #ddd;
+    display:block;
+    margin:auto;
+  "
+>
+  <div class="card" style="margin-top:15px;">
+
+  <h3 style="margin-bottom:10px;">
+    Present Students
+  </h3>
+
+  <div id="presentList">
+
+    <p style="color:gray;">
+      No students marked present
+    </p>
+
+  </div>
+
+</div>
+</div>
+
+<table>
+<thead>
+<tr><th>Name</th><th>Time</th><th>Status</th></tr>
+</thead>
+<tbody id="tableBody">
+<tr><td colspan="3">Loading...</td></tr>
+</tbody>
+</table>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+let records = [];
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+// ================= LOAD =================
+async function loadAttendance(){
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = '<tr><td colspan="3" class="loading">Loading <span class="loader"></span></td></tr>';
+
+  try {
+    const res = await fetch('/api/attendance');
+    const data = await res.json();
+
+    // ✅ SAFE EXTRACTION
+    records = data.records || [];
+    console.log(records);
+
+    const present = data.present || 0;
+    const absent = data.absent || 0;
+    const rate = data.rate || 0;
+
+    document.getElementById("present").textContent = present;
+    document.getElementById("absent").textContent = absent;
+    document.getElementById("rate").textContent = rate + "%";
+
+    renderTable();
+    renderPresentStudents();
+
+  } catch (err){
+    console.log(err);
+    showToast("Error loading attendance");
+  }
+}
+
+function renderTable(){
+  const tbody = document.getElementById("tableBody");
+
+  if(records.length === 0){
+    tbody.innerHTML = '<tr><td colspan="3">No records</td></tr>';
+    return;
+  }
+
+  let html = "";
+
+  records.forEach(r => {
+    html += `
+      <tr>
+        <td>${r.name}</td>
+        <td>${r.time || "-"}</td>
+        <td>
+          <span class="status ${r.status === 'Present' ? 'present' : 'absent'}">
+            ${r.status}
+          </span>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+function renderPresentStudents(){
+
+  const container = document.getElementById("presentList");
+
+  const presentStudents = records.filter(
+    r => r.status === "Present"
+  );
+
+  if(presentStudents.length === 0){
+
+    container.innerHTML = `
+      <p style="color:gray;">
+        No students marked present
+      </p>
+    `;
+
+    return;
+  }
+
+  container.innerHTML = presentStudents.map(r => `
+
+    <div style="
+      padding:10px;
+      margin-bottom:8px;
+      background:#eaf7ea;
+      border-radius:8px;
+      border-left:5px solid green;
+    ">
+
+      <strong>${r.name}</strong><br>
+
+      <small>
+        Marked Present at ${r.time}
+      </small>
+
+    </div>
+
+  `).join('');
+}
+
+// ================= STUDENTS =================
+async function loadStudents(){
+  try {
+    const res = await fetch('/api/students');
+    const data = await res.json();
+
+    document.getElementById("total").textContent = data.total || 0;
+
+  } catch {
+    showToast("Error loading students");
+  }
+}
+
+// ================= CAPTURE FACES =================
+async function captureNewStudent(){
+  const name = prompt("Enter student name:");
+
+  if(!name){
+    showToast("Name is required");
+    return;
+  }
+
+  try {
+    await fetch('/api/run/capture_script', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+
+    showToast("Capture started in new window");
+
+  } catch {
+    showToast("Error starting capture");
+  }
+}
+
+// ================= ACTIONS =================
+async function startRecognition(e){
+  try {
+    const res = await fetch('http://127.0.0.1:5000/api/run/recognize', {
+      method: 'POST'
+    });
+
+    const data = await res.json();
+
+    if(data.status === "running"){
+      document.getElementById("videoFeed").src =
+        "http://127.0.0.1:5000/video_feed?" + new Date().getTime();
+    }
+
+    showToast("Recognition started");
+
+  } catch {
+    showToast("Error starting recognition");
+  }
+}
+
+async function stopRecognition(e){
+
+  try {
+
+    const res = await fetch('http://127.0.0.1:5000/api/run/stop', {
+      method: 'POST'
+    });
+
+    const data = await res.json();
+
+    console.log(data);
+
+    // STOP VIDEO FEED
+    document.getElementById("videoFeed").src = "";
+
+    showToast("Recognition stopped");
+
+  } catch(err) {
+
+    console.log(err);
+
+    showToast("Error stopping recognition");
+
+  }
+}
+
+async function runEncode(e){
+  await fetch('/api/run/encode',{method:'POST'});
+  showToast("Encoding Started");
+}
+
+async function resetData(){
+  await fetch('/api/attendance/reset',{method:'POST'});
+  showToast("Reset Done");
+  loadAttendance();
+}
+
+// ================= AUTO REFRESH =================
+setInterval(async () => {
+
+  await loadAttendance();
+
+}, 2000);
+setInterval(loadAttendance,3000);
+
+
+
+// ================= STATUS =================
+async function pollStatus(){
+
+  try {
+
+    const res = await fetch('/api/status');
+
+    const data = await res.json();
+
+    console.log(data);
+
+  } catch(err){
+
+    console.log(err);
+
+  }
+}
+
+// INIT
+(async function(){
+  await loadAttendance();
+  await loadStudents();
+
+  setInterval(pollStatus, 1000);
+})();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AI Attendance Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    background:#0f172a;
+    color:white;
+    padding:20px;
+}
+
+.card {
+    background:#1e293b;
+    padding:15px;
+    margin:10px;
+    border-radius:10px;
+}
+
+button {
+    padding:10px;
+    margin:5px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+.present { color:#4CAF50; }
+.absent { color:#F44336; }
+
+table {
+    width:100%;
+    margin-top:10px;
+}
+
+th, td {
+    padding:8px;
+    text-align:center;
+}
+
+#logs {
+    max-height:200px;
+    overflow:auto;
+    font-size:13px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🚀 AI Attendance Dashboard</h1>
+<div id="clock"></div>
+
+<!-- ✅ REAL-TIME METRICS -->
+<div class="card">
+<h2>Stats</h2>
+
+<p>Total Students: <span id="m-total">0</span></p>
+<p>Present Today: <span id="m-present">0</span></p>
+<p>Absent Today: <span id="m-absent">0</span></p>
+<p>Attendance Rate: <span id="m-rate">0%</span></p>
+
+</div>
+
+<!-- ACTIONS -->
+<div class="card">
+<h2>Actions</h2>
+<button onclick="capture()">Capture</button>
+<button onclick="encode()">Encode</button>
+<button onclick="recognize()">Start Recognition</button>
+<button onclick="reset()">Reset</button>
+</div>
+
+<!-- CHART -->
+<div class="card">
+<h2>Chart</h2>
+<canvas id="chart"></canvas>
+</div>
+
+<!-- TABLE -->
+<div class="card">
+<h2>Attendance</h2>
+<table border="1">
+<thead>
+<tr>
+<th>Name</th>
+<th>Time</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="table"></tbody>
+</table>
+</div>
+
+<!-- LOGS -->
+<div class="card">
+<h2>Logs</h2>
+<div id="logs"></div>
+</div>
+
+<script>
+const API = "http://localhost:5000";
+let chart;
+
+// ================= LOAD DATA =================
+async function load() {
+    try {
+        // Attendance
+        const res = await fetch(API + "/api/attendance");
+        const data = await res.json();
+
+        document.getElementById("m-present").innerText = data.present;
+        document.getElementById("m-absent").innerText = data.absent;
+        document.getElementById("m-rate").innerText = data.rate + "%";
+
+        // Students (TOTAL)
+        const sres = await fetch(API + "/api/students");
+        const sdata = await sres.json();
+
+        document.getElementById("m-total").innerText = sdata.total;
+
+        // Table
+        let t = "";
+        data.records.forEach(r => {
+            t += `<tr>
+                <td>${r.name}</td>
+                <td>${r.time}</td>
+                <td class="${r.status=='Present'?'present':'absent'}">${r.status}</td>
+            </tr>`;
+        });
+
+        document.getElementById("table").innerHTML = t;
+
+        // Chart
+        renderChart(data.present, data.absent);
+
+    } catch (err) {
+        console.error("Error loading data:", err);
+    }
+}
+
+// ================= CHART =================
+function renderChart(p, a) {
+    const ctx = document.getElementById("chart");
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: ["Present", "Absent"],
+            datasets: [{
+                data: [p, a],
+                backgroundColor: ["#4CAF50", "#F44336"]
+            }]
+        }
+    });
+}
+
+// ================= BUTTONS =================
+async function capture() {
+    let name = prompt("Enter student name:");
+    if (!name) return;
+
+    await fetch(API + "/api/run/capture", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name })
+    });
+
+    alert("Capture started for " + name);
+}
+
+async function encode() {
+    await fetch(API + "/api/run/encode", { method: "POST" });
+    alert("Encoding started");
+}
+
+async function recognize() {
+    await fetch(API + "/api/run/recognize", { method: "POST" });
+    alert("Recognition started");
+}
+
+async function reset() {
+    if (!confirm("Reset today's attendance?")) return;
+
+    await fetch(API + "/api/reset", { method: "POST" });
+    alert("Reset done");
+}
+
+// ================= LOGS =================
+async function logs() {
+    try {
+        const res = await fetch(API + "/api/status");
+        const d = await res.json();
+
+        let html = "";
+
+        Object.keys(d).forEach(k => {
+            d[k].log.slice(-5).forEach(l => {
+                html += `<div>${k}: ${l}</div>`;
+            });
+        });
+
+        document.getElementById("logs").innerHTML = html;
+
+    } catch (err) {
+        console.error("Error loading logs:", err);
+    }
+}
+
+// ================= AUTO REFRESH =================
+setInterval(() => {
+    load();
+    logs();
+}, 3000);
+
+// ================= CLOCK =================
+function clock() {
+    document.getElementById("clock").innerText =
+        new Date().toLocaleTimeString();
+}
+setInterval(clock, 1000);
+
+// INIT
+load();
+logs();
+clock();
+</script>
+
+</body>
+</html>
